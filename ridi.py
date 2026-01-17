@@ -2,6 +2,7 @@
 Main entry point for Ridi Books DRM Remover CLI Utility.
 Provides commands for authentication, listing books, and exporting decrypted files.
 """
+
 import argparse
 import json
 import logging
@@ -10,12 +11,13 @@ import urllib.parse
 import webbrowser
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Protocol, cast
 
 import ridi_utils
+import ridi_types
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("ridi")
 
 # Configuration and Constants
@@ -26,16 +28,20 @@ RIDI_USER_DEVICES_API = "https://account.ridibooks.com/api/user-devices/app"
 
 class ConfigManager:
     """Manages user authentication configuration."""
-    def __init__(self, config_path: Path):
-        self.config_path = config_path
-        self.config = self._load()
 
-    def _load(self) -> Dict[str, Any]:
+    def __init__(self, config_path: Path):
+        self.config_path: Path = config_path
+        self.config: ridi_types.ConfigData = self._load()
+
+    def _load(self) -> ridi_types.ConfigData:
         """Load configuration from file."""
         if not self.config_path.exists():
             return {"users": [], "active_user": None}
         try:
-            return json.loads(self.config_path.read_text(encoding="utf-8"))
+            return cast(
+                ridi_types.ConfigData,
+                json.loads(self.config_path.read_text(encoding="utf-8")),
+            )
         except (json.JSONDecodeError, OSError):
             return {"users": [], "active_user": None}
 
@@ -44,33 +50,35 @@ class ConfigManager:
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
             self.config_path.write_text(
-                json.dumps(self.config, indent=2, ensure_ascii=False),
-                encoding="utf-8"
+                json.dumps(self.config, indent=2, ensure_ascii=False), encoding="utf-8"
             )
         except OSError as e:
             logger.error("Failed to save config: %s", e)
 
     def add_user(
-            self, user_idx: str, device_id: str, device_name: Optional[str], cookies: Dict[str, str]
-            ):
+        self,
+        user_idx: str,
+        device_id: str,
+        device_name: str | None,
+        cookies: dict[str, str],
+    ):
         """Add or update a user in the configuration."""
         # Check if user exists
         for user in self.config["users"]:
             if user["user_idx"] == str(user_idx) and user["device_id"] == device_id:
-                user.update({
-                    "device_name": device_name or "Unknown Device",
-                    "cookies": cookies
-                })
+                user.update(
+                    {"device_name": device_name or "Unknown Device", "cookies": cookies}
+                )
                 self.config["active_user"] = self._get_user_id(user_idx, device_id)
                 self.save()
                 return
 
-        new_user: Dict[str, Any] = {
+        new_user: ridi_types.UserData = {
             "id": self._get_user_id(user_idx, device_id),
-            "user_idx": str(user_idx),
+            "user_idx": user_idx,
             "device_id": device_id,
             "device_name": device_name or "Unknown Device",
-            "cookies": cookies
+            "cookies": cookies,
         }
         self.config["users"].append(new_user)
         self.config["active_user"] = new_user["id"]
@@ -80,7 +88,7 @@ class ConfigManager:
         """Generate a unique ID for a user/device pair."""
         return f"{user_idx}_{device_id[:8]}"
 
-    def get_active_user(self) -> Optional[Dict[str, Any]]:
+    def get_active_user(self) -> ridi_types.UserData | None:
         """Get the currently active user configuration."""
         if not self.config["active_user"]:
             return None
@@ -111,29 +119,32 @@ class ConfigManager:
             return True
         return False
 
-    def list_users(self) -> List[Dict[str, Any]]:
+    def list_users(self) -> list[ridi_types.UserData]:
         """List all registered users."""
         return self.config["users"]
 
 
 class AuthCommand:
     """Handles authentication commands."""
+
     def __init__(self, config_mgr: ConfigManager):
-        self.config_mgr = config_mgr
+        self.config_mgr: ConfigManager = config_mgr
 
     def login(self):
         """Perform login by opening a browser and processing device list JSON."""
         # 1. Open URL with return_url set to the User Devices API
         callback_url = RIDI_USER_DEVICES_API
-        state_payload = json.dumps({"return_url": callback_url}, separators=(',', ':'))
+        state_payload = json.dumps({"return_url": callback_url}, separators=(",", ":"))
         state_q = urllib.parse.quote(state_payload)
         target_url = f"{RIDI_LOGIN_URL}?state={state_q}"
 
         logger.info("Opening browser to: %s", target_url)
         logger.info("\n=== Login Instructions ===")
         logger.info("1. Log in to Ridi Books in the opened browser window.")
-        logger.info("2. After logging in, you will be redirected to a page "
-                    "showing JSON text (device list).")
+        logger.info(
+            "2. After logging in, you will be redirected to a page "
+            + "showing JSON text (device list)."
+        )
         logger.info("3. Copy ALL the JSON text displayed on that page.")
         logger.info("4. Paste it below and press Enter.")
 
@@ -151,36 +162,42 @@ class AuthCommand:
 
         self._process_device_list(json_input)
 
-    def _format_last_used(self, last_used_raw: Optional[str]) -> str:
+    def _format_last_used(self, last_used_raw: str | None) -> str:
         """Format the 'last_used' timestamp."""
         if not last_used_raw:
-            return 'N/A'
+            return "N/A"
         try:
             # Handle 'Z' suffix and set to local timezone
-            dt = datetime.fromisoformat(last_used_raw.replace('Z', '+00:00'))
-            return dt.astimezone().strftime('%Y-%m-%d %H:%M:%S')
+            dt = datetime.fromisoformat(last_used_raw.replace("Z", "+00:00"))
+            return dt.astimezone().strftime("%Y-%m-%d %H:%M:%S")
         except (ValueError, TypeError):
             return last_used_raw
 
-    def _display_devices(self, devices: List[Dict[str, Any]]):
+    def _display_devices(self, devices: list[ridi_types.UserDevice]):
         """Display the list of devices."""
         print("\nSelect the device you are using for this machine:")
-        print(f"{'No.':<4} {'Device Name':<20} {'Device ID':<40} {'Code':<10} {'Last Used':<20}")
+        print(
+            f"{'No.':<4} {'Device Name':<20} {'Device ID':<40} {'Code':<10} {'Last Used':<20}"
+        )
         print("-" * 100)
 
         for idx, dev in enumerate(devices):
-            last_used = self._format_last_used(dev.get('last_used'))
-            print(f"{idx+1:<4} {dev.get('device_nick', 'Unknown'):<20} "
-                  f"{dev.get('device_id'):<40} {dev.get('device_code'):<10} {last_used:<20}")
+            last_used = self._format_last_used(dev.get("last_used"))
+            print(
+                f"{idx + 1:<4} {dev.get('device_nick', 'Unknown'):<20} "
+                + f"{dev.get('device_id'):<40} {dev.get('device_code'):<10} {last_used:<20}"
+            )
 
-    def _select_device(self, devices: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _select_device(
+        self, devices: list[ridi_types.UserDevice]
+    ) -> ridi_types.UserDevice:
         """Prompt user to select a device from the list."""
         while True:
             try:
                 line = input("\nEnter number: ")
                 sel = int(line)
                 if 1 <= sel <= len(devices):
-                    return devices[sel-1]
+                    return devices[sel - 1]
                 logger.warning("Invalid selection.")
             except ValueError:
                 logger.warning("Please enter a number.")
@@ -194,7 +211,7 @@ class AuthCommand:
                 if start != -1:
                     json_str = json_str[start:]
 
-            data = json.loads(json_str)
+            data = cast(ridi_types.UserDevices, json.loads(json_str))
             devices = data.get("user_devices", [])
 
             if not devices:
@@ -204,20 +221,24 @@ class AuthCommand:
             self._display_devices(devices)
             target = self._select_device(devices)
 
-            user_idx = target.get("user_idx")
+            user_idx = str(target.get("user_idx"))
             device_id = target.get("device_id")
             device_name = target.get("device_nick")
 
             if user_idx and device_id:
                 # We don't have cookies anymore, pass empty dict
                 self.config_mgr.add_user(user_idx, device_id, device_name, {})
-                logger.info("Successfully added user %s (Device: %s)", user_idx, device_id)
+                logger.info(
+                    "Successfully added user %s (Device: %s)", user_idx, device_id
+                )
             else:
                 logger.error("Error: Invalid device data in selection.")
 
         except json.JSONDecodeError:
-            logger.error("Invalid JSON format. Please ensure you copied the text correctly.")
-        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error(
+                "Invalid JSON format. Please ensure you copied the text correctly."
+            )
+        except Exception as e:
             logger.error("Error processing data: %s", e)
 
     def switch(self):
@@ -231,14 +252,14 @@ class AuthCommand:
         for idx, user in enumerate(users):
             is_active = user["id"] == self.config_mgr.config.get("active_user")
             active = "*" if is_active else " "
-            print(f"{active} {idx+1}. {user['user_idx']} ({user['device_name']})")
+            print(f"{active} {idx + 1}. {user['user_idx']} ({user['device_name']})")
 
         try:
             sel = int(input("\nSelect user to switch to: "))
             if 1 <= sel <= len(users):
-                target_user = users[sel-1]
+                target_user = users[sel - 1]
                 if self.config_mgr.switch_user(target_user["id"]):
-                    logger.info("Switched to user %s", target_user['user_idx'])
+                    logger.info("Switched to user %s", target_user["user_idx"])
             else:
                 logger.warning("Invalid selection.")
         except ValueError:
@@ -254,8 +275,10 @@ class AuthCommand:
         for user in users:
             is_active = user["id"] == self.config_mgr.config.get("active_user")
             active = "*" if is_active else " "
-            print(f"{active} [{user['id']}] User: {user['user_idx']}, "
-                  f"Device: {user['device_name']}")
+            print(
+                f"{active} [{user['id']}] User: {user['user_idx']}, "
+                + f"Device: {user['device_name']}"
+            )
 
     def logout(self):
         """Logout the current active account."""
@@ -271,10 +294,11 @@ class AuthCommand:
 
 class BooksCommand:
     """Handles book listing commands."""
-    def __init__(self, config_mgr: ConfigManager):
-        self.config_mgr = config_mgr
 
-    def run(self, name_filter: Optional[str] = None, id_filter: Optional[str] = None):
+    def __init__(self, config_mgr: ConfigManager):
+        self.config_mgr: ConfigManager = config_mgr
+
+    def run(self, name_filter: str | None = None, id_filter: str | None = None):
         """List downloaded books matching the filters."""
         active = self.config_mgr.get_active_user()
         if not active:
@@ -303,10 +327,10 @@ class BooksCommand:
 
             self._display_books(results)
 
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception as e:
             logger.error("Error: %s", e)
 
-    def _get_library_books(self, user_idx: str) -> List[ridi_utils.BookInfo]:
+    def _get_library_books(self, user_idx: str) -> list[ridi_utils.BookInfo]:
         """Get list of books from library path."""
         lib_path = ridi_utils.library_path(user_idx)
         if not lib_path.exists():
@@ -321,33 +345,44 @@ class BooksCommand:
             logger.warning("No books found in library.")
         return infos
 
-    def _scan_book_titles(self, infos: List[ridi_utils.BookInfo], device_id: str,
-                         name_filter: Optional[str]) -> List[tuple[str, str]]:
+    def _scan_book_titles(
+        self,
+        infos: list[ridi_utils.BookInfo],
+        device_id: str,
+        name_filter: str | None,
+    ) -> list[tuple[str, str]]:
         """Scan books for titles and apply filter."""
-        results: List[tuple[str, str]] = []
+        results: list[tuple[str, str]] = []
         logger.info("Scanning %d books for metadata...", len(infos))
 
         for i, book in enumerate(infos):
             try:
                 # Print progress to stderr to keep stdout clean
-                print(f"\rProcessing {i+1}/{len(infos)}: {book.id}", end="", file=sys.stderr)
+                print(
+                    f"\rProcessing {i + 1}/{len(infos)}: {book.id}",
+                    end="",
+                    file=sys.stderr,
+                )
 
                 key = ridi_utils.decrypt_key(book, device_id)
                 book_content = ridi_utils.decrypt_book(book, key)
-                title = ridi_utils.extract_title(book.format, book_content) or "Unknown Title"
+                title = (
+                    ridi_utils.extract_title(book.format, book_content)
+                    or "Unknown Title"
+                )
 
                 if name_filter and name_filter not in title:
                     continue
 
                 results.append((book.id, title))
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:
                 if not name_filter:
                     results.append((book.id, f"[Error: {e}]"))
 
         print("\r" + " " * 50 + "\r", end="", file=sys.stderr)  # Clear progress line
         return results
 
-    def _display_books(self, results: List[tuple[str, str]]):
+    def _display_books(self, results: list[tuple[str, str]]):
         """Display the list of books in a table."""
         print(f"{'ID':<12} | {'Title'}")
         print("-" * 60)
@@ -357,11 +392,16 @@ class BooksCommand:
 
 class ExportCommand:
     """Handles book export and decryption commands."""
-    def __init__(self, config_mgr: ConfigManager):
-        self.config_mgr = config_mgr
 
-    def run(self, output_dir: str, name_filter: Optional[str] = None,
-            id_filter: Optional[str] = None):
+    def __init__(self, config_mgr: ConfigManager):
+        self.config_mgr: ConfigManager = config_mgr
+
+    def run(
+        self,
+        output_dir: str,
+        name_filter: str | None = None,
+        id_filter: str | None = None,
+    ):
         """Export and decrypt books matching the filters."""
         active = self.config_mgr.get_active_user()
         if not active:
@@ -376,7 +416,9 @@ class ExportCommand:
             if not infos:
                 return
 
-            candidates = self._filter_candidates(infos, device_id, name_filter, id_filter)
+            candidates = self._filter_candidates(
+                infos, device_id, name_filter, id_filter
+            )
             if not candidates:
                 logger.warning("No books found matching criteria.")
                 return
@@ -386,13 +428,17 @@ class ExportCommand:
             out_path.mkdir(parents=True, exist_ok=True)
 
             success_count = self._export_books(candidates, device_id, out_path)
-            logger.info("\nExport completed. %d/%d books exported to %s",
-                        success_count, len(candidates), out_path.absolute())
+            logger.info(
+                "\nExport completed. %d/%d books exported to %s",
+                success_count,
+                len(candidates),
+                out_path.absolute(),
+            )
 
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except Exception as e:
             logger.error("Error during export: %s", e)
 
-    def _get_exportable_books(self, user_idx: str) -> List[ridi_utils.BookInfo]:
+    def _get_exportable_books(self, user_idx: str) -> list[ridi_utils.BookInfo]:
         """Retrieve the list of books that can be exported."""
         lib_path = ridi_utils.library_path(user_idx)
         if not lib_path.exists():
@@ -408,9 +454,13 @@ class ExportCommand:
             logger.warning("No books found in library.")
         return infos
 
-    def _filter_candidates(self, infos: List[ridi_utils.BookInfo],
-                           device_id: str, name_filter: Optional[str],
-                           id_filter: Optional[str]) -> List[ridi_utils.BookInfo]:
+    def _filter_candidates(
+        self,
+        infos: list[ridi_utils.BookInfo],
+        device_id: str,
+        name_filter: str | None,
+        id_filter: str | None,
+    ) -> list[ridi_utils.BookInfo]:
         """Filter the list of books based on ID and name filters."""
         if id_filter:
             infos = [b for b in infos if b.id == id_filter]
@@ -421,7 +471,7 @@ class ExportCommand:
         if not name_filter:
             return infos
 
-        candidates: List[ridi_utils.BookInfo] = []
+        candidates: list[ridi_utils.BookInfo] = []
         logger.info("Scanning books to match title...")
         for book in infos:
             try:
@@ -430,19 +480,30 @@ class ExportCommand:
                 title = ridi_utils.extract_title(book.format, book_content)
                 if title and name_filter in title:
                     candidates.append(book)
-            except Exception: # pylint: disable=broad-exception-caught
+            except Exception:
                 continue
         return candidates
 
-    def _export_books(self, candidates: List[ridi_utils.BookInfo],
-                      device_id: str, out_path: Path) -> int:
+    def _export_books(
+        self, candidates: list[ridi_utils.BookInfo], device_id: str, out_path: Path
+    ) -> int:
         """Execute the export for each candidate."""
         success_count = 0
         for book_info in candidates:
-            if ridi_utils.decrypt_with_progress(book_info, device_id,
-                                                debug=False, output_dir=out_path):
+            if ridi_utils.decrypt_with_progress(
+                book_info, device_id, debug=False, output_dir=out_path
+            ):
                 success_count += 1
         return success_count
+
+
+class CLIArgs(Protocol):
+    command: str | None
+    auth_command: str | None
+    name: str | None
+    id: str | None
+    output: str
+    all: bool
 
 
 def main():
@@ -462,18 +523,27 @@ def main():
 
     # Books command
     books_parser = subparsers.add_parser("books", help="List downloaded books")
-    books_parser.add_argument("-n", "--name", help="Filter by book title (partial match)")
+    books_parser.add_argument(
+        "-n", "--name", help="Filter by book title (partial match)"
+    )
     books_parser.add_argument("-i", "--id", help="Filter by book ID (exact match)")
 
     # Export command
     export_parser = subparsers.add_parser("export", help="Export and decrypt books")
-    export_parser.add_argument("-o", "--output", default=".",
-                               help="Output directory (default: current)")
-    export_parser.add_argument("-n", "--name", help="Export books matching title (partial match)")
-    export_parser.add_argument("-i", "--id", help="Export book matching ID (exact match)")
-    export_parser.add_argument("-a", "--all", action="store_true", help="Export all books")
+    export_parser.add_argument(
+        "-o", "--output", default=".", help="Output directory (default: current)"
+    )
+    export_parser.add_argument(
+        "-n", "--name", help="Export books matching title (partial match)"
+    )
+    export_parser.add_argument(
+        "-i", "--id", help="Export book matching ID (exact match)"
+    )
+    export_parser.add_argument(
+        "-a", "--all", action="store_true", help="Export all books"
+    )
 
-    args = parser.parse_args()
+    args = cast(CLIArgs, cast(object, parser.parse_args()))
 
     config_mgr = ConfigManager(CONFIG_FILE)
 

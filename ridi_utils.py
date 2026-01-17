@@ -2,6 +2,7 @@
 Utility module for Ridi Books DRM removal.
 Provides functionality for finding library paths, decrypting keys, and decrypting book files.
 """
+
 import io
 import logging
 import os
@@ -10,7 +11,6 @@ import sys
 import zipfile
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
 from xml.etree import ElementTree as ET
 
 from cryptography.hazmat.backends import default_backend
@@ -23,11 +23,12 @@ logger = logging.getLogger("ridi_utils")
 
 class BookFormat(Enum):
     """Supported book formats."""
+
     EPUB = "epub"
     PDF = "pdf"
 
     @classmethod
-    def from_path(cls, path: Path) -> 'BookFormat':
+    def from_path(cls, path: Path) -> "BookFormat":
         """Determine book format from file extension."""
         ext = path.suffix[1:].lower()
         if ext == "epub":
@@ -43,16 +44,18 @@ class BookFormat(Enum):
 
 class FileKind(Enum):
     """Kinds of files associated with a book."""
+
     BOOK = "book"
     DATA = "data"
 
 
 class BookInfo:
     """Information about a book in the library."""
+
     def __init__(self, path: Path):
-        self.path = path
-        self.id = path.name
-        self.format = self._get_format(path)
+        self.path: Path = path
+        self.id: str = path.name
+        self.format: BookFormat = self._get_format(path)
 
     def _get_format(self, path: Path) -> BookFormat:
         """Detect book format by looking at files in the directory"""
@@ -68,8 +71,11 @@ class BookInfo:
         """Get the file path for the specified kind."""
         ext = self.format.extension() if kind == FileKind.BOOK else "dat"
         for entry in self.path.iterdir():
-            if entry.is_file() and entry.name.startswith(self.id) and \
-               entry.suffix.lower() == f".{ext}":
+            if (
+                entry.is_file()
+                and entry.name.startswith(self.id)
+                and entry.suffix.lower() == f".{ext}"
+            ):
                 return entry
         return self.path / f"{self.id}.{ext}"
 
@@ -93,7 +99,14 @@ def library_path(user_idx: str) -> Path:
     """Get the library path for the current OS."""
     if sys.platform == "darwin":  # macOS
         home = Path(os.environ.get("HOME", "~")).expanduser()
-        return home / "Library" / "Application Support" / "Ridibooks" / "library" / f"_{user_idx}"
+        return (
+            home
+            / "Library"
+            / "Application Support"
+            / "Ridibooks"
+            / "library"
+            / f"_{user_idx}"
+        )
     if sys.platform == "win32":  # Windows
         appdata = Path(os.environ.get("APPDATA", ""))
         if not appdata or not appdata.exists():
@@ -102,9 +115,9 @@ def library_path(user_idx: str) -> Path:
     raise NotImplementedError("library_path() not implemented for this OS")
 
 
-def book_infos(path: Path) -> List[BookInfo]:
+def book_infos(path: Path) -> list[BookInfo]:
     """Get BookInfo objects for all books in the library."""
-    infos: List[BookInfo] = []
+    infos: list[BookInfo] = []
     if not path.exists():
         return infos
 
@@ -131,7 +144,7 @@ def decrypt_key(book_info: BookInfo, device_id: str, debug: bool = False) -> byt
         logger.debug("Data file size: %d bytes", len(data))
 
     # Use first 16 bytes of device_id as key
-    key = device_id.encode('utf-8')[:16]
+    key = device_id.encode("utf-8")[:16]
 
     # First 16 bytes of data file is IV
     iv = data[:16]
@@ -160,7 +173,7 @@ def decrypt_key(book_info: BookInfo, device_id: str, debug: bool = False) -> byt
 
     try:
         # Range check and decode with ignore
-        session_key = plaintext[68:84].decode('utf-8', errors='ignore').encode('utf-8')
+        session_key = plaintext[68:84].decode("utf-8", errors="ignore").encode("utf-8")
         if len(session_key) != 16:
             raise ValueError("Invalid session key length")
 
@@ -171,6 +184,7 @@ def decrypt_key(book_info: BookInfo, device_id: str, debug: bool = False) -> byt
     except Exception as e:
         raise ValueError(f"Failed to extract session key: {e}") from e
 
+
 def _looks_like_valid_output(fmt: BookFormat, data: bytes) -> bool:
     """Check if the data looks like a valid EPUB or PDF file."""
     if fmt == BookFormat.EPUB:
@@ -178,7 +192,6 @@ def _looks_like_valid_output(fmt: BookFormat, data: bytes) -> bool:
         return data.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
     if fmt == BookFormat.PDF:
         return data.startswith(b"%PDF")
-    return False
 
 
 def _sanitize_filename(name: str, max_len: int = 120) -> str:
@@ -194,9 +207,28 @@ def _sanitize_filename(name: str, max_len: int = 120) -> str:
         name = name[:max_len].rstrip()
     # Disallow reserved names on Windows
     reserved = {
-        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5",
-        "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
-        "LPT6", "LPT7", "LPT8", "LPT9"
+        "CON",
+        "PRN",
+        "AUX",
+        "NUL",
+        "COM1",
+        "COM2",
+        "COM3",
+        "COM4",
+        "COM5",
+        "COM6",
+        "COM7",
+        "COM8",
+        "COM9",
+        "LPT1",
+        "LPT2",
+        "LPT3",
+        "LPT4",
+        "LPT5",
+        "LPT6",
+        "LPT7",
+        "LPT8",
+        "LPT9",
     }
     if name.upper() in reserved:
         name = f"_{name}"
@@ -204,19 +236,19 @@ def _sanitize_filename(name: str, max_len: int = 120) -> str:
     return name or "untitled"
 
 
-def _extract_title_epub(data: bytes) -> Optional[str]:
+def _extract_title_epub(data: bytes) -> str | None:
     """Extract book title from EPUB metadata."""
     try:
-        with zipfile.ZipFile(io.BytesIO(data), 'r') as zf:
-            with zf.open('META-INF/container.xml') as f:
+        with zipfile.ZipFile(io.BytesIO(data), "r") as zf:
+            with zf.open("META-INF/container.xml") as f:
                 container = ET.fromstring(f.read())
 
-            namespaces = {'c': 'urn:oasis:names:tc:opendocument:xmlns:container'}
-            rootfile = container.find('.//c:rootfile', namespaces)
+            namespaces = {"c": "urn:oasis:names:tc:opendocument:xmlns:container"}
+            rootfile = container.find(".//c:rootfile", namespaces)
             if rootfile is None:
                 return None
 
-            opf_path = rootfile.attrib.get('full-path')
+            opf_path = rootfile.attrib.get("full-path")
             if not opf_path:
                 return None
 
@@ -225,46 +257,45 @@ def _extract_title_epub(data: bytes) -> Optional[str]:
 
             # Common namespaces
             ns = {
-                'opf': 'http://www.idpf.org/2007/opf',
-                'dc': 'http://purl.org/dc/elements/1.1/'
+                "opf": "http://www.idpf.org/2007/opf",
+                "dc": "http://purl.org/dc/elements/1.1/",
             }
             # Try metadata/dc:title
-            title_el = opf.find('.//dc:title', ns)
+            title_el = opf.find(".//dc:title", ns)
             if title_el is not None and title_el.text:
                 return title_el.text.strip()
 
             # Fallback: check without namespaces
             for el in opf.iter():
-                if el.tag.lower().endswith('title') and el.text:
+                if el.tag.lower().endswith("title") and el.text:
                     return el.text.strip()
     except (zipfile.BadZipFile, KeyError, ET.ParseError):
         pass
     return None
 
 
-def _extract_title_pdf(data: bytes) -> Optional[str]:
+def _extract_title_pdf(data: bytes) -> str | None:
     """Extract book title from PDF metadata."""
     try:
         try:
-            import PyPDF2  # pylint: disable=import-outside-toplevel
+            import PyPDF2
         except ImportError:
             return None
         reader = PyPDF2.PdfReader(io.BytesIO(data))
         meta = reader.metadata
-        if meta and getattr(meta, 'title', None):
+        if meta and getattr(meta, "title", None):
             return str(meta.title).strip()
         return None
-    except Exception:  # pylint: disable=broad-exception-caught
+    except Exception:
         return None
 
 
-def extract_title(fmt: BookFormat, data: bytes) -> Optional[str]:
+def extract_title(fmt: BookFormat, data: bytes) -> str | None:
     """Extract book title from file data based on format."""
     if fmt == BookFormat.EPUB:
         return _extract_title_epub(data)
     if fmt == BookFormat.PDF:
         return _extract_title_pdf(data)
-    return None
 
 
 def decrypt_book(book_info: BookInfo, key: bytes, debug: bool = False) -> bytes:
@@ -297,7 +328,7 @@ def decrypt_book(book_info: BookInfo, key: bytes, debug: bool = False) -> bytes:
         raise ValueError("Book file too small to contain IV")
     iv = book_file[:16]
     ciphertext = book_file[16:]
-    cipher = Cipher( algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     decrypted = decryptor.update(ciphertext) + decryptor.finalize()
     # PKCS7 unpad
@@ -306,8 +337,12 @@ def decrypt_book(book_info: BookInfo, key: bytes, debug: bool = False) -> bytes:
     return plaintext
 
 
-def decrypt(book_info: BookInfo, device_id: str, debug: bool = False,
-            output_dir: Optional[Path] = None):
+def decrypt(
+    book_info: BookInfo,
+    device_id: str,
+    debug: bool = False,
+    output_dir: Path | None = None,
+):
     """Decrypt a book and save it to the output directory."""
     key = decrypt_key(book_info, device_id, debug)
     book_contents = decrypt_book(book_info, key, debug)
@@ -337,19 +372,23 @@ def decrypt(book_info: BookInfo, device_id: str, debug: bool = False,
         logger.debug("Wrote output: %s", target)
 
 
-def decrypt_with_progress(book_info: BookInfo, device_id: str, debug: bool = False,
-                          output_dir: Optional[Path] = None):
+def decrypt_with_progress(
+    book_info: BookInfo,
+    device_id: str,
+    debug: bool = False,
+    output_dir: Path | None = None,
+):
     """Decrypt a book with progress indicator."""
     file_name = book_info.file_name(FileKind.BOOK)
 
-    print(f"\r⣿ Decrypting \"{file_name}\"", end="", flush=True)
+    print(f'\r⣿ Decrypting "{file_name}"', end="", flush=True)
 
     try:
         decrypt(book_info, device_id, debug, output_dir)
-        print(f"\r⣿ Decrypting \"{file_name}\" ✔︎")
+        print(f'\r⣿ Decrypting "{file_name}" ✔︎')
         return True
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        print(f"\r⣿ Decrypting \"{file_name}\" ✘")
+    except Exception as e:
+        print(f'\r⣿ Decrypting "{file_name}" ✘')
         if debug:
             logger.error("Error decrypting %s: %s", book_info.id, e)
         return False

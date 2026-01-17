@@ -1,0 +1,17 @@
+[project]
+name = "ridi-drm-remover"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "cryptography>=46.0.3",
+    "nuitka>=2.8.9",
+    "pypdf2>=3.0.1",
+    "zstandard>=0.25.0",
+]
+
+[tool.basedpyright]
+typeCheckingMode = "recommended"
+pythonVersion = "3.12"
+reportUnusedCallResult = "none"
