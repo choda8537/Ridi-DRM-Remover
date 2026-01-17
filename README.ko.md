@@ -8,7 +8,8 @@
 
 ## 준비 사항
 
-- **Python 3.8 이상**
+- [**Python 3.12**](https://www.python.org/)
+- [**uv**](https://github.com/astral-sh/uv)
 - **리디북스 PC/Mac 앱**: DRM을 제거하려는 도서가 공식 앱을 통해 미리 다운로드되어 있어야 합니다.
 
 ## 설치 방법
@@ -23,7 +24,7 @@
 2. (선택 사항) 가상 환경을 생성하고 활성화합니다:
 
    ```bash
-   python -m venv venv
+   uv venv
    # Windows
    .\venv\Scripts\activate
    # macOS/Linux
@@ -32,7 +33,7 @@
 
 3. 필요한 패키지를 설치합니다:
    ```bash
-   pip install -r requirements.txt
+   uv sync
    ```
 
 ## 사용 방법
@@ -85,11 +86,11 @@ python ridi.py export -n "제목"
 
 ## 컴파일 (빌드)
 
-[Nuitka](https://nuitka.net/)를 사용하여 `ridi.py`를 단일 실행 파일(.exe)로 컴파일할 수 있습니다. 안정적인 컴파일을 위해 **Python 3.13** 사용을 권장합니다:
+[Nuitka](https://nuitka.net/)를 사용하여 `ridi.py`를 단일 실행 파일(.exe)로 컴파일할 수 있습니다:
 
 ```bash
 # 단일 실행 파일로 컴파일
-python -m nuitka --onefile --output-dir=builds/ ridi.py
+python -m nuitka ridi.py
 ```
 
 ## 주요 기능
@@ -103,4 +104,3 @@ python -m nuitka --onefile --output-dir=builds/ ridi.py
 
 - [Retro-Rex8/Ridi-DRM-Remover](https://github.com/Retro-Rex8/Ridi-DRM-Remover)
 - [hsj1/ridiculous](https://github.com/hsj1/ridiculous)
-- 이 프로젝트는 리디 DRM에 대한 커뮤니티의 여러 연구를 바탕으로 제작되었습니다.

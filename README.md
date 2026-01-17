@@ -8,7 +8,8 @@ A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting
 
 ## Prerequisites
 
-- **Python 3.8+**
+- [**Python 3.12**](https://www.python.org/)
+- [**uv**](https://github.com/astral-sh/uv)
 - **Ridibooks Desktop App**: Books must be downloaded through the official app before they can be decrypted.
 
 ## Installation
@@ -23,7 +24,7 @@ A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting
 2. (Optional) Create and activate a virtual environment:
 
    ```bash
-   python -m venv venv
+   uv venv
    # Windows
    .\venv\Scripts\activate
    # macOS/Linux
@@ -32,7 +33,7 @@ A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting
 
 3. Install requirements:
    ```bash
-   pip install -r requirements.txt
+   uv sync
    ```
 
 ## Usage
@@ -48,7 +49,7 @@ python ridi.py auth login
 ```
 
 - Follow the instructions to log in through the browser.
-- Once logged in, copy the JSON data from the provided URL.
+- Once logged in, copy the JSON data from the provided page.
 - Paste it back into the terminal and select the device where your books are downloaded.
 
 **Other auth commands:**
@@ -85,11 +86,11 @@ python ridi.py export -n "Title"
 
 ## Compilation (Build)
 
-You can compile `ridi.py` into a standalone executable using [Nuitka](https://nuitka.net/). **Python 3.13** is recommended for stable compilation:
+You can compile `ridi.py` into a standalone executable using [Nuitka](https://nuitka.net/):
 
 ```bash
 # Compile to a single executable
-python -m nuitka --onefile --output-dir=builds/ ridi.py
+python -m nuitka ridi.py
 ```
 
 ## Features
@@ -103,4 +104,4 @@ python -m nuitka --onefile --output-dir=builds/ ridi.py
 
 - [Retro-Rex8/Ridi-DRM-Remover](https://github.com/Retro-Rex8/Ridi-DRM-Remover)
 - [hsj1/ridiculous](https://github.com/hsj1/ridiculous)
-- This project is inspired by various community research on Ridi DRM.
+
