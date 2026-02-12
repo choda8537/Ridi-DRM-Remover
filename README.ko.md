@@ -8,7 +8,7 @@
 
 ## 준비 사항
 
-- [**Python 3.12**](https://www.python.org/)
+- [**Python 3.14**](https://www.python.org/)
 - [**uv**](https://github.com/astral-sh/uv)
 - **리디북스 PC/Mac 앱**: DRM을 제거하려는 도서가 공식 앱을 통해 미리 다운로드되어 있어야 합니다.
 
@@ -21,14 +21,10 @@
    cd Ridi-DRM-Remover
    ```
 
-2. (선택 사항) 가상 환경을 생성하고 활성화합니다:
+2. 가상 환경을 생성합니다:
 
    ```bash
    uv venv
-   # Windows
-   .\venv\Scripts\activate
-   # macOS/Linux
-   source venv/bin/activate
    ```
 
 3. 필요한 패키지를 설치합니다:
@@ -38,14 +34,18 @@
 
 ## 사용 방법
 
-모든 작업은 `ridi.py`를 통해 수행됩니다.
+이 도구는 `uv run src/main.py`를 통해 실행할 수 있습니다.
+
+```bash
+uv run src/main.py --help
+```
 
 ### 1. 계정 인증 및 설정 (`auth`)
 
 도서를 추출하기 전, `device_id`와 `user_idx`를 설정하기 위해 로그인을 진행해야 합니다.
 
 ```bash
-python ridi.py auth login
+uv run src/main.py auth login
 ```
 
 - 안내에 따라 브라우저에서 리디북스에 로그인합니다.
@@ -54,20 +54,20 @@ python ridi.py auth login
 
 **기타 인증 명령:**
 
-- `python ridi.py auth list`: 저장된 계정 목록 보기.
-- `python ridi.py auth switch`: 활성 계정 전환.
-- `python ridi.py auth logout`: 계정 정보 삭제.
+- `uv run src/main.py auth list`: 저장된 계정 목록 보기.
+- `uv run src/main.py auth switch`: 활성 계정 전환.
+- `uv run src/main.py auth logout`: 계정 정보 삭제.
 
 ### 2. 도서 목록 확인 (`books`)
 
 로컬 라이브러리에 다운로드된 도서 중 추출 가능한 목록을 확인합니다.
 
 ```bash
-python ridi.py books
+uv run src/main.py books
 ```
 
-- **제목 필터링**: `python ridi.py books -n "제목"`
-- **ID로 필터링**: `python ridi.py books -i "123456"`
+- **제목 필터링**: `uv run src/main.py books -n "제목"`
+- **ID로 필터링**: `uv run src/main.py books -i "123456"`
 
 ### 3. 도서 내보내기 (`export`)
 
@@ -75,23 +75,25 @@ python ridi.py books
 
 ```bash
 # 모든 다운로드된 도서 내보내기
-python ridi.py export --all -o ./output
+uv run src/main.py export --all -o ./output
 
 # 특정 ID의 도서만 내보내기
-python ridi.py export -i "123456" -o ./output
+uv run src/main.py export -i "123456" -o ./output
 
 # 제목이 포함된 도서 내보내기
-python ridi.py export -n "제목"
+uv run src/main.py export -n "제목"
 ```
 
 ## 컴파일 (빌드)
 
-[Nuitka](https://nuitka.net/)를 사용하여 `ridi.py`를 단일 실행 파일(.exe)로 컴파일할 수 있습니다:
+`PyInstaller`를 사용하여 단일 실행 파일(.exe)로 컴파일할 수 있습니다:
 
 ```bash
-# 단일 실행 파일로 컴파일
-python -m nuitka ridi.py
+uv run src/build.py
 ```
+
+빌드가 완료되면 `dist/` 디렉토리에 단일 실행 파일이 생성됩니다.
+
 
 ## 주요 기능
 

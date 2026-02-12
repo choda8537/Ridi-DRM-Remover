@@ -8,7 +8,7 @@ A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting
 
 ## Prerequisites
 
-- [**Python 3.12**](https://www.python.org/)
+- [**Python 3.14**](https://www.python.org/)
 - [**uv**](https://github.com/astral-sh/uv)
 - **Ridibooks Desktop App**: Books must be downloaded through the official app before they can be decrypted.
 
@@ -21,14 +21,10 @@ A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting
    cd Ridi-DRM-Remover
    ```
 
-2. (Optional) Create and activate a virtual environment:
+2. Create a virtual environment:
 
    ```bash
    uv venv
-   # Windows
-   .\venv\Scripts\activate
-   # macOS/Linux
-   source venv/bin/activate
    ```
 
 3. Install requirements:
@@ -38,14 +34,18 @@ A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting
 
 ## Usage
 
-The tool uses `ridi.py` as the main entry point.
+The tool can be run using `uv run src/main.py`.
+
+```bash
+uv run src/main.py --help
+```
 
 ### 1. Authentication (`auth`)
 
 Before decrypting, you need to authenticate to store your `device_id` and `user_idx`.
 
 ```bash
-python ridi.py auth login
+uv run src/main.py auth login
 ```
 
 - Follow the instructions to log in through the browser.
@@ -54,20 +54,20 @@ python ridi.py auth login
 
 **Other auth commands:**
 
-- `python ridi.py auth list`: List saved accounts.
-- `python ridi.py auth switch`: Switch the active account.
-- `python ridi.py auth logout`: Remove account information.
+- `uv run src/main.py auth list`: List saved accounts.
+- `uv run src/main.py auth switch`: Switch the active account.
+- `uv run src/main.py auth logout`: Remove account information.
 
 ### 2. List Books (`books`)
 
 Scan your local library to see which books are available for decryption.
 
 ```bash
-python ridi.py books
+uv run src/main.py books
 ```
 
-- **Filter by name**: `python ridi.py books -n "Aranya"`
-- **Filter by ID**: `python ridi.py books -i "123456"`
+- **Filter by name**: `uv run src/main.py books -n "Aranya"`
+- **Filter by ID**: `uv run src/main.py books -i "123456"`
 
 ### 3. Decrypt and Export (`export`)
 
@@ -75,23 +75,24 @@ Decrypt the downloaded books and save them to a specified directory.
 
 ```bash
 # Export all downloaded books
-python ridi.py export --all -o ./output
+uv run src/main.py export --all -o ./output
 
 # Export specific book by ID
-python ridi.py export -i "123456" -o ./output
+uv run src/main.py export -i "123456" -o ./output
 
 # Export books matching a name
-python ridi.py export -n "Title"
+uv run src/main.py export -n "Title"
 ```
 
 ## Compilation (Build)
 
-You can compile `ridi.py` into a standalone executable using [Nuitka](https://nuitka.net/):
+You can compile the tool into a standalone executable using `PyInstaller`:
 
 ```bash
-# Compile to a single executable
-python -m nuitka ridi.py
+uv run src/build.py
 ```
+
+After building, the single executable will be located in the `dist/` directory.
 
 ## Features
 
@@ -104,4 +105,3 @@ python -m nuitka ridi.py
 
 - [Retro-Rex8/Ridi-DRM-Remover](https://github.com/Retro-Rex8/Ridi-DRM-Remover)
 - [hsj1/ridiculous](https://github.com/hsj1/ridiculous)
-
