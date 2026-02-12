@@ -2,8 +2,10 @@
 __pycache__/
 .venv/
 
-# Nuitka build files
+# PyInstaller build files
+build/
 dist/
+*.spec
 
 # Generated eBook files
 books/
