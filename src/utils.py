@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 # Configure logger
-logger = logging.getLogger("ridi_utils")
+logger = logging.getLogger("utils")
 
 
 class BookFormat(Enum):

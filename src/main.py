@@ -3,10 +3,6 @@ Main entry point for Ridi Books DRM Remover CLI Utility.
 Provides commands for authentication, listing books, and exporting decrypted files.
 """
 
-# Nuitka build flags:
-# nuitka-project: --onefile
-# nuitka-project: --output-dir=dist
-
 import argparse
 import json
 import logging
@@ -17,8 +13,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol, cast
 
-import ridi_utils
-import ridi_types
+from models import ConfigData, UserData, UserDevice, UserDevices
+import utils
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -35,15 +32,15 @@ class ConfigManager:
 
     def __init__(self, config_path: Path):
         self.config_path: Path = config_path
-        self.config: ridi_types.ConfigData = self._load()
+        self.config: ConfigData = self._load()
 
-    def _load(self) -> ridi_types.ConfigData:
+    def _load(self) -> ConfigData:
         """Load configuration from file."""
         if not self.config_path.exists():
             return {"users": [], "active_user": None}
         try:
             return cast(
-                ridi_types.ConfigData,
+                ConfigData,
                 json.loads(self.config_path.read_text(encoding="utf-8")),
             )
         except (json.JSONDecodeError, OSError):
@@ -77,7 +74,7 @@ class ConfigManager:
                 self.save()
                 return
 
-        new_user: ridi_types.UserData = {
+        new_user: UserData = {
             "id": self._get_user_id(user_idx, device_id),
             "user_idx": user_idx,
             "device_id": device_id,
@@ -92,7 +89,7 @@ class ConfigManager:
         """Generate a unique ID for a user/device pair."""
         return f"{user_idx}_{device_id[:8]}"
 
-    def get_active_user(self) -> ridi_types.UserData | None:
+    def get_active_user(self) -> UserData | None:
         """Get the currently active user configuration."""
         if not self.config["active_user"]:
             return None
@@ -123,7 +120,7 @@ class ConfigManager:
             return True
         return False
 
-    def list_users(self) -> list[ridi_types.UserData]:
+    def list_users(self) -> list[UserData]:
         """List all registered users."""
         return self.config["users"]
 
@@ -177,7 +174,7 @@ class AuthCommand:
         except (ValueError, TypeError):
             return last_used_raw
 
-    def _display_devices(self, devices: list[ridi_types.UserDevice]):
+    def _display_devices(self, devices: list[UserDevice]):
         """Display the list of devices."""
         print("\nSelect the device you are using for this machine:")
         print(
@@ -192,9 +189,7 @@ class AuthCommand:
                 + f"{dev.get('device_id'):<40} {dev.get('device_code'):<10} {last_used:<20}"
             )
 
-    def _select_device(
-        self, devices: list[ridi_types.UserDevice]
-    ) -> ridi_types.UserDevice:
+    def _select_device(self, devices: list[UserDevice]) -> UserDevice:
         """Prompt user to select a device from the list."""
         while True:
             try:
@@ -215,7 +210,7 @@ class AuthCommand:
                 if start != -1:
                     json_str = json_str[start:]
 
-            data = cast(ridi_types.UserDevices, json.loads(json_str))
+            data = cast(UserDevices, json.loads(json_str))
             devices = data.get("user_devices", [])
 
             if not devices:
@@ -334,16 +329,16 @@ class BooksCommand:
         except Exception as e:
             logger.error("Error: %s", e)
 
-    def _get_library_books(self, user_idx: str) -> list[ridi_utils.BookInfo]:
+    def _get_library_books(self, user_idx: str) -> list[utils.BookInfo]:
         """Get list of books from library path."""
-        lib_path = ridi_utils.library_path(user_idx)
+        lib_path = utils.library_path(user_idx)
         if not lib_path.exists():
             logger.error("Library path not found for user %s: %s", user_idx, lib_path)
             return []
 
-        infos = ridi_utils.book_infos(lib_path)
+        infos = utils.book_infos(lib_path)
         # Filter out books without .dat files
-        infos = [b for b in infos if b.get_file(ridi_utils.FileKind.DATA).exists()]
+        infos = [b for b in infos if b.get_file(utils.FileKind.DATA).exists()]
 
         if not infos:
             logger.warning("No books found in library.")
@@ -351,7 +346,7 @@ class BooksCommand:
 
     def _scan_book_titles(
         self,
-        infos: list[ridi_utils.BookInfo],
+        infos: list[utils.BookInfo],
         device_id: str,
         name_filter: str | None,
     ) -> list[tuple[str, str]]:
@@ -368,11 +363,10 @@ class BooksCommand:
                     file=sys.stderr,
                 )
 
-                key = ridi_utils.decrypt_key(book, device_id)
-                book_content = ridi_utils.decrypt_book(book, key)
+                key = utils.decrypt_key(book, device_id)
+                book_content = utils.decrypt_book(book, key)
                 title = (
-                    ridi_utils.extract_title(book.format, book_content)
-                    or "Unknown Title"
+                    utils.extract_title(book.format, book_content) or "Unknown Title"
                 )
 
                 if name_filter and name_filter not in title:
@@ -442,17 +436,17 @@ class ExportCommand:
         except Exception as e:
             logger.error("Error during export: %s", e)
 
-    def _get_exportable_books(self, user_idx: str) -> list[ridi_utils.BookInfo]:
+    def _get_exportable_books(self, user_idx: str) -> list[utils.BookInfo]:
         """Retrieve the list of books that can be exported."""
-        lib_path = ridi_utils.library_path(user_idx)
+        lib_path = utils.library_path(user_idx)
         if not lib_path.exists():
             logger.error("Library path not found for user %s: %s", user_idx, lib_path)
             logger.info("Ensure you have downloaded books via the Ridi Reader app.")
             return []
 
-        infos = ridi_utils.book_infos(lib_path)
+        infos = utils.book_infos(lib_path)
         # Filter out books without .dat files
-        infos = [b for b in infos if b.get_file(ridi_utils.FileKind.DATA).exists()]
+        infos = [b for b in infos if b.get_file(utils.FileKind.DATA).exists()]
 
         if not infos:
             logger.warning("No books found in library.")
@@ -460,11 +454,11 @@ class ExportCommand:
 
     def _filter_candidates(
         self,
-        infos: list[ridi_utils.BookInfo],
+        infos: list[utils.BookInfo],
         device_id: str,
         name_filter: str | None,
         id_filter: str | None,
-    ) -> list[ridi_utils.BookInfo]:
+    ) -> list[utils.BookInfo]:
         """Filter the list of books based on ID and name filters."""
         if id_filter:
             infos = [b for b in infos if b.id == id_filter]
@@ -475,13 +469,13 @@ class ExportCommand:
         if not name_filter:
             return infos
 
-        candidates: list[ridi_utils.BookInfo] = []
+        candidates: list[utils.BookInfo] = []
         logger.info("Scanning books to match title...")
         for book in infos:
             try:
-                key = ridi_utils.decrypt_key(book, device_id)
-                book_content = ridi_utils.decrypt_book(book, key)
-                title = ridi_utils.extract_title(book.format, book_content)
+                key = utils.decrypt_key(book, device_id)
+                book_content = utils.decrypt_book(book, key)
+                title = utils.extract_title(book.format, book_content)
                 if title and name_filter in title:
                     candidates.append(book)
             except Exception:
@@ -489,12 +483,12 @@ class ExportCommand:
         return candidates
 
     def _export_books(
-        self, candidates: list[ridi_utils.BookInfo], device_id: str, out_path: Path
+        self, candidates: list[utils.BookInfo], device_id: str, out_path: Path
     ) -> int:
         """Execute the export for each candidate."""
         success_count = 0
         for book_info in candidates:
-            if ridi_utils.decrypt_with_progress(
+            if utils.decrypt_with_progress(
                 book_info, device_id, debug=False, output_dir=out_path
             ):
                 success_count += 1
