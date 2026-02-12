@@ -2,6 +2,9 @@
 __pycache__/
 .venv/
 
+# Linter / formatter cache
+.ruff_cache/
+
 # PyInstaller build files
 build/
 dist/

@@ -5,18 +5,20 @@ description = "A CLI tool to decrypt purchased and downloaded ebooks from Ridibo
 readme = "README.md"
 requires-python = "==3.14.*"
 dependencies = [
-    "cryptography>=46.0.3",
-    "pypdf2>=3.0.1",
+    "cryptography>=46.0.5",
+    "pypdf>=6.7.0",
 ]
 
 [dependency-groups]
 dev = [
-    "basedpyright>=1.37.1",
+    "basedpyright>=1.38.0",
     "pyinstaller>=6.18.0",
-    "ruff>=0.14.13",
+    "ruff>=0.15.0",
 ]
 
 [tool.basedpyright]
 typeCheckingMode = "recommended"
 pythonVersion = "3.14"
 reportUnusedCallResult = "none"
+extraPaths = ["src"]
+reportImplicitRelativeImport = false
