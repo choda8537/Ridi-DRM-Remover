@@ -8,8 +8,7 @@
 
 ## 준비 사항
 
-- [**Python 3.14**](https://www.python.org/)
-- [**uv**](https://github.com/astral-sh/uv)
+- [**Bun**](https://bun.sh/) (최신 버전)
 - **리디북스 PC/Mac 앱**: DRM을 제거하려는 도서가 공식 앱을 통해 미리 다운로드되어 있어야 합니다.
 
 ## 설치 방법
@@ -21,23 +20,18 @@
    cd Ridi-DRM-Remover
    ```
 
-2. 가상 환경을 생성합니다:
+2. 의존성을 설치합니다:
 
    ```bash
-   uv venv
-   ```
-
-3. 필요한 패키지를 설치합니다:
-   ```bash
-   uv sync
+   bun install
    ```
 
 ## 사용 방법
 
-이 도구는 `uv run src/main.py`를 통해 실행할 수 있습니다.
+이 도구는 `bun run dev`를 통해 실행할 수 있습니다.
 
 ```bash
-uv run src/main.py --help
+bun run dev --help
 ```
 
 ### 1. 계정 인증 및 설정 (`auth`)
@@ -45,7 +39,7 @@ uv run src/main.py --help
 도서를 추출하기 전, `device_id`와 `user_idx`를 설정하기 위해 로그인을 진행해야 합니다.
 
 ```bash
-uv run src/main.py auth login
+bun run dev auth login
 ```
 
 - 안내에 따라 브라우저에서 리디북스에 로그인합니다.
@@ -54,20 +48,20 @@ uv run src/main.py auth login
 
 **기타 인증 명령:**
 
-- `uv run src/main.py auth list`: 저장된 계정 목록 보기.
-- `uv run src/main.py auth switch`: 활성 계정 전환.
-- `uv run src/main.py auth logout`: 계정 정보 삭제.
+- `bun run dev auth list`: 저장된 계정 목록 보기.
+- `bun run dev auth switch`: 활성 계정 전환.
+- `bun run dev auth logout`: 계정 정보 삭제.
 
 ### 2. 도서 목록 확인 (`books`)
 
 로컬 라이브러리에 다운로드된 도서 중 추출 가능한 목록을 확인합니다.
 
 ```bash
-uv run src/main.py books
+bun run dev books
 ```
 
-- **제목 필터링**: `uv run src/main.py books -n "제목"`
-- **ID로 필터링**: `uv run src/main.py books -i "123456"`
+- **제목 필터링**: `bun run dev books -n "제목"`
+- **ID로 필터링**: `bun run dev books -i "123456"`
 
 ### 3. 도서 내보내기 (`export`)
 
@@ -75,21 +69,21 @@ uv run src/main.py books
 
 ```bash
 # 모든 다운로드된 도서 내보내기
-uv run src/main.py export --all -o ./output
+bun run dev export --all -o ./output
 
 # 특정 ID의 도서만 내보내기
-uv run src/main.py export -i "123456" -o ./output
+bun run dev export -i "123456" -o ./output
 
 # 제목이 포함된 도서 내보내기
-uv run src/main.py export -n "제목"
+bun run dev export -n "제목"
 ```
 
 ## 컴파일 (빌드)
 
-`PyInstaller`를 사용하여 단일 실행 파일(.exe)로 컴파일할 수 있습니다:
+Bun을 사용하여 단일 실행 파일로 컴파일할 수 있습니다:
 
 ```bash
-uv run src/build.py
+bun run src/build.ts
 ```
 
 빌드가 완료되면 `dist/` 디렉토리에 단일 실행 파일이 생성됩니다.

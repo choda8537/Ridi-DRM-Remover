@@ -1,14 +1,13 @@
-# Python cache files
-__pycache__/
-.venv/
-
-# Linter / formatter cache
-.ruff_cache/
-
-# PyInstaller build files
-build/
+# Build files
 dist/
-*.spec
+
+# Bun
+node_modules/
 
 # Generated eBook files
 books/
+
+# Environment variables
+.env
+
+examples/

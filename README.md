@@ -8,8 +8,7 @@ A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting
 
 ## Prerequisites
 
-- [**Python 3.14**](https://www.python.org/)
-- [**uv**](https://github.com/astral-sh/uv)
+- [**Bun**](https://bun.sh/) (latest version)
 - **Ridibooks Desktop App**: Books must be downloaded through the official app before they can be decrypted.
 
 ## Installation
@@ -21,23 +20,18 @@ A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting
    cd Ridi-DRM-Remover
    ```
 
-2. Create a virtual environment:
+2. Install dependencies:
 
    ```bash
-   uv venv
-   ```
-
-3. Install requirements:
-   ```bash
-   uv sync
+   bun install
    ```
 
 ## Usage
 
-The tool can be run using `uv run src/main.py`.
+The tool can be run using `bun run dev`.
 
 ```bash
-uv run src/main.py --help
+bun run dev --help
 ```
 
 ### 1. Authentication (`auth`)
@@ -45,7 +39,7 @@ uv run src/main.py --help
 Before decrypting, you need to authenticate to store your `device_id` and `user_idx`.
 
 ```bash
-uv run src/main.py auth login
+bun run dev auth login
 ```
 
 - Follow the instructions to log in through the browser.
@@ -54,20 +48,20 @@ uv run src/main.py auth login
 
 **Other auth commands:**
 
-- `uv run src/main.py auth list`: List saved accounts.
-- `uv run src/main.py auth switch`: Switch the active account.
-- `uv run src/main.py auth logout`: Remove account information.
+- `bun run dev auth list`: List saved accounts.
+- `bun run dev auth switch`: Switch the active account.
+- `bun run dev auth logout`: Remove account information.
 
 ### 2. List Books (`books`)
 
 Scan your local library to see which books are available for decryption.
 
 ```bash
-uv run src/main.py books
+bun run dev books
 ```
 
-- **Filter by name**: `uv run src/main.py books -n "Aranya"`
-- **Filter by ID**: `uv run src/main.py books -i "123456"`
+- **Filter by name**: `bun run dev books -n "Aranya"`
+- **Filter by ID**: `bun run dev books -i "123456"`
 
 ### 3. Decrypt and Export (`export`)
 
@@ -75,21 +69,21 @@ Decrypt the downloaded books and save them to a specified directory.
 
 ```bash
 # Export all downloaded books
-uv run src/main.py export --all -o ./output
+bun run dev export --all -o ./output
 
 # Export specific book by ID
-uv run src/main.py export -i "123456" -o ./output
+bun run dev export -i "123456" -o ./output
 
 # Export books matching a name
-uv run src/main.py export -n "Title"
+bun run dev export -n "Title"
 ```
 
 ## Compilation (Build)
 
-You can compile the tool into a standalone executable using `PyInstaller`:
+You can compile the tool into a standalone executable using Bun:
 
 ```bash
-uv run src/build.py
+bun run src/build.ts
 ```
 
 After building, the single executable will be located in the `dist/` directory.

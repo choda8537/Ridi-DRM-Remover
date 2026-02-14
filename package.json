@@ -1,0 +1,35 @@
+{
+  "name": "ridi-drm-remover",
+  "version": "0.2.0",
+  "description": "A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting them into DRM-free files (EPUB/PDF).",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "ridi": "dist/index.js"
+  },
+  "scripts": {
+    "dev": "bun src/index.ts",
+    "build": "bun scripts/build.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "ridibooks",
+    "drm",
+    "epub",
+    "pdf",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "commander": "^12.1.0",
+    "open": "^10.2.0",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/bun": "^1.3.9",
+    "typescript": "^5.9.3"
+  }
+}
