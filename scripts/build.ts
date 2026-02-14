@@ -7,7 +7,7 @@ const __dirname = dirname(__filename)
 
 async function main() {
   const projectRoot = join(__dirname, '..')
-  const mainScript = join(projectRoot, 'src', 'index.ts')
+  const mainScript = join(projectRoot, 'src', 'cli', 'index.ts')
 
   if (!existsSync(mainScript)) {
     console.error(`Error: Could not find main script at ${mainScript}`)

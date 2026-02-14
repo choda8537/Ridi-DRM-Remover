@@ -83,7 +83,7 @@ bun run dev export -n "Title"
 You can compile the tool into a standalone executable using Bun:
 
 ```bash
-bun run src/build.ts
+bun run build
 ```
 
 After building, the single executable will be located in the `dist/` directory.

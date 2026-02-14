@@ -83,11 +83,10 @@ bun run dev export -n "제목"
 Bun을 사용하여 단일 실행 파일로 컴파일할 수 있습니다:
 
 ```bash
-bun run src/build.ts
+bun run build
 ```
 
 빌드가 완료되면 `dist/` 디렉토리에 단일 실행 파일이 생성됩니다.
-
 
 ## 주요 기능
 
