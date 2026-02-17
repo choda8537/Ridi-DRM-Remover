@@ -17,7 +17,6 @@
  * - https://github.com/Retro-Rex8/Ridi-DRM-Remover (Apache-2.0)
  * - https://github.com/hsj1/ridiculous (CC0 1.0 Universal)
  */
-
 import { BookFormat } from '@/core/book/types'
 
 export function isValidOutput(fmt: BookFormat, data: Buffer): boolean {

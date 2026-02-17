@@ -17,11 +17,12 @@
  * - https://github.com/Retro-Rex8/Ridi-DRM-Remover (Apache-2.0)
  * - https://github.com/hsj1/ridiculous (CC0 1.0 Universal)
  */
-
 import { createDecipheriv } from 'crypto'
-import { readFileSync, existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
+
 import { BookInfo } from '@/core/book/book-info'
 import { FileKind } from '@/core/book/types'
+
 import { isValidOutput, removePKCS7Padding } from './validation'
 
 export function decryptKey(bookInfo: BookInfo, deviceId: string): Buffer {

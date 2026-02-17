@@ -1,5 +1,6 @@
 import { readdirSync, statSync } from 'fs'
 import { basename, join } from 'path'
+
 import { BookFormat, FileKind } from './types'
 
 export function bookFormatFromPath(path: string): BookFormat {

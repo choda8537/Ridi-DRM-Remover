@@ -1,9 +1,11 @@
 import { existsSync } from 'fs'
-import { BookInfo } from './book-info'
-import { libraryPath, discoverBooks } from './library'
-import { FileKind } from './types'
-import { decryptKey, decryptBook } from '@/core/crypto/decrypt'
+
+import { decryptBook, decryptKey } from '@/core/crypto/decrypt'
 import { extractTitle } from '@/core/metadata/extract'
+
+import { BookInfo } from './book-info'
+import { discoverBooks, libraryPath } from './library'
+import { FileKind } from './types'
 
 export class BookService {
   getAvailableBooks(userIdx: string): BookInfo[] {

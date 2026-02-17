@@ -1,4 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { dirname } from 'path'
+
 import { ConfigData, UserData } from './types'
 
 export class ConfigService {
@@ -24,7 +26,7 @@ export class ConfigService {
 
   save(): void {
     try {
-      const dir = this.configPath.substring(0, this.configPath.lastIndexOf('/'))
+      const dir = dirname(this.configPath)
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true })
       }

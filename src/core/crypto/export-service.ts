@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { BookInfo } from '@/core/book/book-info'
+
+import { bookFormatExtension, BookInfo } from '@/core/book/book-info'
 import { FileKind } from '@/core/book/types'
-import { bookFormatExtension } from '@/core/book/book-info'
-import { decryptKey, decryptBook } from './decrypt'
 import { extractTitle } from '@/core/metadata/extract'
 import { sanitizeFilename } from '@/core/metadata/sanitize'
+
+import { decryptBook, decryptKey } from './decrypt'
 
 export interface ExportProgress {
   bookId: string

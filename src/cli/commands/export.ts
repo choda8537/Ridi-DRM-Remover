@@ -1,6 +1,7 @@
+import { logger } from '@/cli/utils/logger'
 import { BookService } from '@/core/book/book-service'
-import { ExportService } from '@/core/crypto/export-service'
 import { ConfigService } from '@/core/config/config-service'
+import { ExportService } from '@/core/crypto/export-service'
 
 export class ExportCommandCLI {
   constructor(
@@ -16,7 +17,7 @@ export class ExportCommandCLI {
   ): Promise<void> {
     const active = this.configService.getActiveUser()
     if (!active) {
-      console.error('No active user. Please login first.')
+      logger.error('No active user. Please login first.')
       return
     }
 
@@ -29,11 +30,11 @@ export class ExportCommandCLI {
       books = await this.bookService.filterByName(books, deviceId, nameFilter)
 
       if (books.length === 0) {
-        console.warn('No books found matching criteria.')
+        logger.warn('No books found matching criteria.')
         return
       }
 
-      console.log(`Found ${books.length} books. Preparing to export...`)
+      logger.info(`Found ${books.length} books. Preparing to export...`)
 
       const result = await this.exportService.exportBooks(
         books,
@@ -43,21 +44,21 @@ export class ExportCommandCLI {
           if (progress.status === 'processing') {
             process.stdout.write(`\r⣿ Decrypting "${progress.fileName}"`)
           } else if (progress.status === 'success') {
-            console.log(`\r⣿ Decrypting "${progress.fileName}" ✔︎`)
+            process.stdout.write(`\r⣿ Decrypting "${progress.fileName}" ✔︎\n`)
           } else {
-            console.log(`\r⣿ Decrypting "${progress.fileName}" ✘`)
+            process.stdout.write(`\r⣿ Decrypting "${progress.fileName}" ✘\n`)
           }
         }
       )
 
-      console.log(
-        `\nExport completed. ${result.success}/${result.total} books exported to ${outputDir}`
+      logger.success(
+        `Export completed. ${result.success}/${result.total} books exported to ${outputDir}`
       )
     } catch (e) {
       if (e instanceof Error) {
-        console.error(`Error during export: ${e.message}`)
+        logger.error(`Error during export: ${e.message}`)
       } else {
-        console.error(`Error during export: ${e}`)
+        logger.error(`Error during export: ${e}`)
       }
     }
   }
