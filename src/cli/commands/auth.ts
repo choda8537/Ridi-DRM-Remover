@@ -1,18 +1,132 @@
 import { stdin, stdout } from 'process'
 import { createInterface } from 'readline'
 import * as open from 'open'
+import { table } from 'table'
+
+import { logger } from '@/cli/utils/logger'
 import { AuthService } from '@/core/auth/auth-service'
 import { UserDevice } from '@/core/auth/types'
-import { displayWidth, truncateText } from '@/cli/utils/text'
-import { getTerminalWidth } from '@/cli/utils/terminal'
 
 export class AuthCommandCLI {
   constructor(private authService: AuthService) {}
 
-  async login(): Promise<void> {
-    const url = this.authService.getLoginUrl()
+  async login(manual: boolean = false): Promise<void> {
+    if (!manual && (await this.attemptAutoLogin())) return
+    await this.performManualLogin()
+  }
 
-    console.log(`Opening browser to: ${url}`)
+  async switch(): Promise<void> {
+    const users = this.authService.listUsers()
+    if (users.length === 0) {
+      logger.info('No users found.')
+      return
+    }
+
+    const activeUserId = this.authService.getActiveUser()?.id
+    this.displayUserList(users, activeUserId)
+
+    const selectedUser = await this.promptUserSelection(users)
+    if (selectedUser && this.authService.switchUser(selectedUser.id)) {
+      logger.success(`Switched to user ${selectedUser.user_idx}`)
+    } else {
+      logger.warn('Invalid selection.')
+    }
+  }
+
+  listAccounts(json: boolean = false): void {
+    const users = this.authService.listUsers()
+    if (users.length === 0) {
+      if (json) {
+        console.log('[]')
+      } else {
+        logger.info('No users found.')
+      }
+      return
+    }
+
+    if (json) {
+      console.log(JSON.stringify(users, null, 2))
+      return
+    }
+
+    const activeUserId = this.authService.getActiveUser()?.id
+    logger.info('Registered Users:')
+
+    const headers = ['Active', 'ID', 'User Index', 'Device Name']
+    const rows = users.map(user => [
+      user.id === activeUserId ? '*' : '',
+      user.id,
+      user.user_idx,
+      user.device_name || 'Unknown'
+    ])
+
+    console.log(table([headers, ...rows]))
+  }
+
+  logout(): void {
+    const activeUser = this.authService.getActiveUser()
+    if (!activeUser) {
+      logger.info('No active user.')
+      return
+    }
+
+    if (this.authService.removeUser(activeUser.id)) {
+      logger.success('User removed.')
+    } else {
+      logger.error('Failed to remove user.')
+    }
+  }
+
+  private async attemptAutoLogin(): Promise<boolean> {
+    logger.info('Attempting automatic login using Ridibooks App data...')
+    const autoLoginResult = await this.authService.autoLogin()
+
+    if (!autoLoginResult) {
+      logger.warn('Automatic login failed. Falling back to manual login.')
+      return false
+    }
+
+    this.authService.addDevice(autoLoginResult.device)
+    logger.success(
+      `Successfully logged in automatically: ${autoLoginResult.username} (Device: ${autoLoginResult.device.device_id})`
+    )
+    return true
+  }
+
+  private async performManualLogin(): Promise<void> {
+    const url = this.authService.getLoginUrl()
+    this.displayManualLoginInstructions(url)
+
+    await open.default(url)
+
+    const jsonInput = await this.promptJsonInput()
+    if (!jsonInput) {
+      logger.warn('No data entered.')
+      return
+    }
+
+    try {
+      const devices = this.authService.parseDeviceList(jsonInput)
+      if (devices.length === 0) {
+        logger.error('No devices found in the provided JSON.')
+        return
+      }
+
+      this.displayDevices(devices)
+      const selected = await this.selectDevice(devices)
+      this.authService.addDevice(selected)
+      logger.success(
+        `Successfully added user ${selected.user_idx} (Device: ${selected.device_id})`
+      )
+    } catch {
+      logger.error(
+        'Invalid JSON format. Please ensure you copied the text correctly.'
+      )
+    }
+  }
+
+  private displayManualLoginInstructions(url: string): void {
+    logger.info(`Opening browser to: ${url}`)
     console.log('\n=== Login Instructions ===')
     console.log('1. Log in to Ridi Books in the opened browser window.')
     console.log(
@@ -20,195 +134,93 @@ export class AuthCommandCLI {
     )
     console.log('3. Copy ALL the JSON text displayed on that page.')
     console.log('4. Paste it below and press Enter.')
+  }
 
-    await open.default(url)
-
-    const rl = createInterface({ input: stdin, output: stdout })
-
-    rl.question('\nPaste JSON > ', async jsonInput => {
-      rl.close()
-      if (!jsonInput.trim()) {
-        console.warn('No data entered.')
-        return
-      }
-
-      try {
-        const devices = this.authService.parseDeviceList(jsonInput.trim())
-        if (devices.length === 0) {
-          console.error('No devices found in the provided JSON.')
-          return
-        }
-
-        this.displayDevices(devices)
-        const selected = await this.selectDevice(devices)
-        this.authService.addDevice(selected)
-        console.log(
-          `Successfully added user ${selected.user_idx} (Device: ${selected.device_id})`
-        )
-      } catch (e) {
-        console.error(
-          'Invalid JSON format. Please ensure you copied the text correctly.'
-        )
-      }
+  private promptJsonInput(): Promise<string> {
+    return new Promise(resolve => {
+      const rl = createInterface({ input: stdin, output: stdout })
+      rl.question('\nPaste JSON > ', input => {
+        rl.close()
+        resolve(input.trim())
+      })
     })
+  }
+
+  private displayDevices(devices: UserDevice[]): void {
+    logger.info('Select the device you are using for this machine:')
+
+    const headers = ['No.', 'Device Name', 'Device ID', 'Code', 'Last Used']
+    const rows = devices.map((device, index) => [
+      String(index + 1),
+      device.device_nick || 'Unknown',
+      device.device_id,
+      device.device_code,
+      this.formatLastUsed(device.last_used)
+    ])
+
+    console.log(table([headers, ...rows]))
   }
 
   private formatLastUsed(lastUsedRaw: string | null): string {
     if (!lastUsedRaw) return 'N/A'
+
     try {
-      const dt = new Date(lastUsedRaw)
-      return dt.toLocaleString()
+      return new Date(lastUsedRaw).toLocaleString()
     } catch {
       return lastUsedRaw
     }
   }
 
-  private displayDevices(devices: UserDevice[]): void {
-    const terminalWidth = getTerminalWidth()
-
-    const fixedWidth = 4 + 3 + 5
-    const deviceIdWidth = 40
-    const codeWidth = 10
-
-    const remaining = Math.max(
-      terminalWidth - fixedWidth - deviceIdWidth - codeWidth,
-      30
-    )
-    const deviceNameWidth = Math.max(Math.floor(remaining * 0.4), 15)
-    const lastUsedWidth = Math.max(remaining - deviceNameWidth, 15)
-
-    console.log('\nSelect the device you are using for this machine:')
-    console.log(
-      `${'No.'.padEnd(4)} ${'Device Name'.padEnd(deviceNameWidth)} ${'Device ID'.padEnd(
-        deviceIdWidth
-      )} ${'Code'.padEnd(codeWidth)} ${'Last Used'.padEnd(lastUsedWidth)}`
-    )
-    console.log(
-      '-'.repeat(
-        Math.min(
-          terminalWidth,
-          4 + deviceNameWidth + deviceIdWidth + codeWidth + lastUsedWidth + 4
-        )
-      )
-    )
-
-    for (let idx = 0; idx < devices.length; idx++) {
-      const dev = devices[idx]
-      const lastUsed = this.formatLastUsed(dev.last_used)
-      const deviceNameRaw = dev.device_nick || 'Unknown'
-      const deviceId = dev.device_id
-
-      const deviceName = truncateText(deviceNameRaw, deviceNameWidth)
-      const deviceIdDisplay = truncateText(deviceId, deviceIdWidth)
-      const lastUsedDisplay = truncateText(lastUsed, lastUsedWidth)
-
-      const deviceNamePadded =
-        deviceName + ' '.repeat(deviceNameWidth - displayWidth(deviceName))
-      const deviceIdPadded =
-        deviceIdDisplay +
-        ' '.repeat(deviceIdWidth - displayWidth(deviceIdDisplay))
-      const lastUsedPadded =
-        lastUsedDisplay +
-        ' '.repeat(lastUsedWidth - displayWidth(lastUsedDisplay))
-
-      console.log(
-        `${String(idx + 1).padEnd(4)} ${deviceNamePadded} ${deviceIdPadded} ${dev.device_code.padEnd(
-          codeWidth
-        )} ${lastUsedPadded}`
-      )
-    }
-    console.log(
-      '-'.repeat(
-        Math.min(
-          terminalWidth,
-          4 + deviceNameWidth + deviceIdWidth + codeWidth + lastUsedWidth + 4
-        )
-      )
-    )
-  }
-
   private selectDevice(devices: UserDevice[]): Promise<UserDevice> {
     return new Promise(resolve => {
       const rl = createInterface({ input: stdin, output: stdout })
-      const ask = () => {
-        rl.question('\nEnter number: ', line => {
-          const sel = parseInt(line, 10)
-          if (sel >= 1 && sel <= devices.length) {
+
+      const askForSelection = () => {
+        rl.question('\nEnter number: ', input => {
+          const selection = parseInt(input, 10)
+
+          if (selection >= 1 && selection <= devices.length) {
             rl.close()
-            resolve(devices[sel - 1])
+            resolve(devices[selection - 1])
           } else {
-            console.warn('Invalid selection.')
-            ask()
+            logger.warn('Invalid selection.')
+            askForSelection()
           }
         })
       }
-      ask()
+
+      askForSelection()
     })
   }
 
-  async switch(): Promise<void> {
-    const users = this.authService.listUsers()
-    if (users.length === 0) {
-      console.log('No users found.')
-      return
-    }
+  private displayUserList(
+    users: Array<{ id: string; user_idx: string; device_name: string | null }>,
+    activeUserId?: string
+  ): void {
+    logger.info('Registered Users:')
+    users.forEach((user, index) => {
+      const marker = user.id === activeUserId ? '*' : ' '
+      const deviceName = user.device_name || 'Unknown'
+      console.log(`${marker} ${index + 1}. ${user.user_idx} (${deviceName})`)
+    })
+  }
 
-    const activeUserId = this.authService.getActiveUser()?.id
+  private promptUserSelection(
+    users: Array<{ id: string; user_idx: string }>
+  ): Promise<(typeof users)[0] | null> {
+    return new Promise(resolve => {
+      const rl = createInterface({ input: stdin, output: stdout })
 
-    console.log('\nRegistered Users:')
-    for (let idx = 0; idx < users.length; idx++) {
-      const user = users[idx]
-      const isActive = user.id === activeUserId
-      const active = isActive ? '*' : ' '
-      console.log(
-        `${active} ${idx + 1}. ${user.user_idx} (${user.device_name})`
-      )
-    }
+      rl.question('\nSelect user to switch to: ', input => {
+        rl.close()
+        const selection = parseInt(input, 10)
 
-    const rl = createInterface({ input: stdin, output: stdout })
-    rl.question('\nSelect user to switch to: ', line => {
-      rl.close()
-      const sel = parseInt(line, 10)
-      if (sel >= 1 && sel <= users.length) {
-        const targetUser = users[sel - 1]
-        if (this.authService.switchUser(targetUser.id)) {
-          console.log(`Switched to user ${targetUser.user_idx}`)
+        if (selection >= 1 && selection <= users.length) {
+          resolve(users[selection - 1])
+        } else {
+          resolve(null)
         }
-      } else {
-        console.warn('Invalid selection.')
-      }
+      })
     })
-  }
-
-  listAccounts(): void {
-    const users = this.authService.listUsers()
-    if (users.length === 0) {
-      console.log('No users found.')
-      return
-    }
-
-    const activeUserId = this.authService.getActiveUser()?.id
-
-    console.log('\nRegistered Users:')
-    for (const user of users) {
-      const isActive = user.id === activeUserId
-      const active = isActive ? '*' : ' '
-      console.log(
-        `${active} [${user.id}] User: ${user.user_idx}, Device: ${user.device_name}`
-      )
-    }
-  }
-
-  logout(): void {
-    const activeUser = this.authService.getActiveUser()
-    if (!activeUser) {
-      console.log('No active user.')
-      return
-    }
-    if (this.authService.removeUser(activeUser.id)) {
-      console.log('User removed.')
-    } else {
-      console.error('Failed to remove user.')
-    }
   }
 }
