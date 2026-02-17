@@ -20,12 +20,20 @@
   "dependencies": {
     "adm-zip": "^0.5.16",
     "commander": "^12.1.0",
+    "crypto-js": "^4.2.0",
+    "keytar": "^7.9.0",
     "open": "^10.2.0",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "picocolors": "^1.1.1",
+    "table": "^6.9.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@types/adm-zip": "^0.5.7",
     "@types/bun": "^1.3.9",
+    "@types/crypto-js": "^4.2.2",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3"
   }
 }
