@@ -1,16 +1,24 @@
 import { Command } from 'commander'
-import { ConfigService } from '@/core/config/config-service'
+
+import { logger } from '@/cli/utils/logger'
+import { APP_VERSION } from '@/cli/version'
 import { AuthService } from '@/core/auth/auth-service'
 import { BookService } from '@/core/book/book-service'
+import { ConfigService } from '@/core/config/config-service'
 import { ExportService } from '@/core/crypto/export-service'
+import { CONFIG_FILE } from '@/shared/constants'
+
 import { AuthCommandCLI } from './commands/auth'
 import { BooksCommandCLI } from './commands/books'
 import { ExportCommandCLI } from './commands/export'
-import { CONFIG_FILE } from '@/shared/constants'
 
 async function main(): Promise<void> {
   const program = new Command()
-  program.name('ridi').description('Ridi Books DRM Remover CLI Utility')
+
+  program
+    .name('ridi')
+    .description('Ridi Books DRM Remover CLI Utility')
+    .version(APP_VERSION, '-V, --version')
 
   const configService = new ConfigService(CONFIG_FILE)
   const authService = new AuthService(configService)
@@ -29,7 +37,8 @@ async function main(): Promise<void> {
   authCmd
     .command('login')
     .description('Login to Ridi account')
-    .action(() => authCLI.login())
+    .option('--manual', 'Skip automatic login and perform manual login')
+    .action(options => authCLI.login(options.manual))
   authCmd
     .command('logout')
     .description('Logout current account')
@@ -41,15 +50,17 @@ async function main(): Promise<void> {
   authCmd
     .command('list')
     .description('List accounts')
-    .action(() => authCLI.listAccounts())
+    .option('--json', 'Output list as JSON')
+    .action(options => authCLI.listAccounts(options.json))
 
   program
     .command('books')
     .description('List downloaded books')
     .option('-n, --name <name>', 'Filter by book title (partial match)')
     .option('-i, --id <id>', 'Filter by book ID (exact match)')
+    .option('--json', 'Output list as JSON')
     .action(async options => {
-      await booksCLI.run(options.name, options.id)
+      await booksCLI.run(options.name, options.id, options.json)
     })
 
   program
@@ -61,7 +72,7 @@ async function main(): Promise<void> {
     .option('-a, --all', 'Export all books')
     .action(async options => {
       if (!options.all && !options.name && !options.id) {
-        console.log('Error: Please specify --all, --name, or --id')
+        logger.error('Please specify --all, --name, or --id')
         return
       }
       await exportCLI.run(options.output, options.name, options.id)
@@ -71,5 +82,5 @@ async function main(): Promise<void> {
 }
 
 main().catch(e => {
-  console.error(e)
+  logger.error(e instanceof Error ? e.message : String(e))
 })
