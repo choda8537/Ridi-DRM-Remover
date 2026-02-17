@@ -11,6 +11,10 @@ permissions:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    environment: production
+    env:
+      RIDI_OAUTH_CLIENT_ID: ${{ secrets.RIDI_OAUTH_CLIENT_ID }}
+      RIDI_OAUTH_CLIENT_SECRET: ${{ secrets.RIDI_OAUTH_CLIENT_SECRET }}
 
     strategy:
       matrix:
