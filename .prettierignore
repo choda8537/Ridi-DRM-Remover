@@ -1,0 +1,11 @@
+# Build files
+dist/
+
+# Bun
+node_modules/
+
+# Generated eBook files
+books/
+
+# Environment variables
+.env
