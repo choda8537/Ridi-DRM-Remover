@@ -1,9 +1,9 @@
-import { execSync } from 'child_process'
+import { $ } from 'bun'
 import { existsSync, readFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
-import { logger } from '../src/cli/utils/logger'
+import { logger } from '@/cli/utils/logger'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -25,7 +25,7 @@ async function main() {
   let gitCommit = 'unknown'
 
   try {
-    gitCommit = execSync('git rev-parse --short HEAD').toString().trim()
+    gitCommit = (await $`git rev-parse --short HEAD`.text()).trim()
   } catch {
     logger.warn('Could not get git commit hash.')
   }
@@ -48,10 +48,10 @@ async function main() {
       minify: true,
       sourcemap: 'linked',
       define: {
-        'process.env.RIDI_OAUTH_CLIENT_ID': JSON.stringify(
+        RIDI_OAUTH_CLIENT_ID: JSON.stringify(
           process.env.RIDI_OAUTH_CLIENT_ID
         ),
-        'process.env.RIDI_OAUTH_CLIENT_SECRET': JSON.stringify(
+        RIDI_OAUTH_CLIENT_SECRET: JSON.stringify(
           process.env.RIDI_OAUTH_CLIENT_SECRET
         ),
         BUILD_VERSION: JSON.stringify(version),
