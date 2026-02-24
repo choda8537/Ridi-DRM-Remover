@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { Command } from 'commander'
 
 import { logger } from '@/cli/utils/logger'

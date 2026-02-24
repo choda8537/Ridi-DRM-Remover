@@ -183,10 +183,6 @@ export class AppAuthService {
     return bytes.slice(0, bytes.length - paddingLength)
   }
 
-  private isValidJson(str: string): boolean {
-    return str.startsWith('{') && (str.includes('data') || str.includes('user'))
-  }
-
   private convertToByteArray(wordArray: CryptoJS.lib.WordArray): Uint8Array {
     const { words, sigBytes } = wordArray
     const result = new Uint8Array(sigBytes)
@@ -209,11 +205,38 @@ export class AppAuthService {
       const deviceId = data?.data?.device?.deviceId
       const username = data?.data?.autoLogin?.username
 
-      if (!refreshToken || !deviceId || !username) return null
+      if (!deviceId) return null
+      // refreshToken 또는 username이 없으면 null (API 호출 불가)
+      if (!refreshToken || !username) return null
 
       return { refreshToken, deviceId, username }
     } catch {
       return null
     }
+  }
+
+  /** refreshToken 없이 deviceId만 추출 (autoLogin 꺼진 경우) */
+  async getDeviceIdOnly(): Promise<{ deviceId: string } | null> {
+    try {
+      const key = await this.retrieveKeychainKey()
+      if (!key) return null
+
+      const settingsPath = this.resolveSettingsPath()
+      if (!settingsPath || !existsSync(settingsPath)) return null
+
+      const encryptedData = readFileSync(settingsPath)
+      const decryptedJson = this.decryptSettingsFile(encryptedData, key)
+      if (!decryptedJson) return null
+
+      const data = JSON.parse(decryptedJson)
+      const deviceId = data?.data?.device?.deviceId
+      return deviceId ? { deviceId } : null
+    } catch {
+      return null
+    }
+  }
+
+  private isValidJson(str: string): boolean {
+    return str.startsWith('{') && (str.includes('data') || str.includes('user') || str.includes('schema'))
   }
 }

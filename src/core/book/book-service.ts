@@ -1,7 +1,7 @@
 import { existsSync } from 'fs'
 
 import { decryptBook, decryptKey } from '@/core/crypto/decrypt'
-import { extractTitle } from '@/core/metadata/extract'
+import { extractCover, extractTitle } from '@/core/metadata/extract'
 
 import { BookInfo } from './book-info'
 import { discoverBooks, libraryPath } from './library'
@@ -61,8 +61,8 @@ export class BookService {
     books: BookInfo[],
     deviceId: string,
     onProgress?: (current: number, total: number, bookId: string) => void
-  ): Promise<Array<{ book: BookInfo; title: string }>> {
-    const results: Array<{ book: BookInfo; title: string }> = []
+  ): Promise<Array<{ book: BookInfo; title: string; cover: string | null }>> {
+    const results: Array<{ book: BookInfo; title: string; cover: string | null }> = []
 
     for (let i = 0; i < books.length; i++) {
       const book = books[i]
@@ -71,11 +71,11 @@ export class BookService {
       try {
         const key = decryptKey(book, deviceId)
         const content = decryptBook(book, key)
-        const title =
-          (await extractTitle(book.format, content)) || 'Unknown Title'
-        results.push({ book, title })
+        const title = (await extractTitle(book.format, content)) || 'Unknown Title'
+        const cover = extractCover(book.format, content)
+        results.push({ book, title, cover })
       } catch (e) {
-        results.push({ book, title: `[Error: ${e}]` })
+        results.push({ book, title: `[Error: ${e}]`, cover: null })
       }
     }
 

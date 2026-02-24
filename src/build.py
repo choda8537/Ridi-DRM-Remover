@@ -1,0 +1,27 @@
+from pathlib import Path
+import PyInstaller.__main__
+
+def main():
+    src_dir = Path(__file__).parent
+    main_script = src_dir / "main.py"
+    
+    if not main_script.exists():
+        print(f"Error: main.py not found at {main_script}")
+        return 1
+
+    args = [
+        str(main_script),
+        "--onefile",
+        "--name=ridi",
+        "--windowed",           # GUI 앱이면 추가 (콘솔창 안 뜸)
+        # "--icon=app.ico",     # 필요하면 추가
+        # "--add-data=assets;assets",  # 폴더/파일 필요하면
+    ]
+
+    print("Building:", " ".join(args))
+    PyInstaller.__main__.run(args)
+    return 0
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(main() or 0)

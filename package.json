@@ -3,10 +3,14 @@
   "version": "0.4.0",
   "description": "A CLI tool to decrypt purchased and downloaded ebooks from Ridibooks, converting them into DRM-free files (EPUB/PDF).",
   "type": "module",
+  "main": "build/electron/gui/main.js",
   "scripts": {
     "dev": "bun src/cli/index.ts",
     "build": "bun scripts/build.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gui:dev": "concurrently \"npx vite src/gui/renderer\" \"wait-on http://localhost:5173 && bun scripts/start-electron.ts\"",
+    "gui": "npm run gui:dev",
+    "build:app": "bun scripts/build-electron.ts"
   },
   "keywords": [
     "ridibooks",
@@ -17,23 +21,71 @@
   ],
   "author": "Taejun Park (https://github.com/thecats1105)",
   "license": "MIT",
+  "build": {
+    "appId": "com.ridi.drm-remover",
+    "productName": "Ridi DRM Remover",
+    "directories": {
+      "output": "dist-app"
+    },
+    "files": [
+      "build/electron/**/*",
+      "build/renderer/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  },
   "dependencies": {
     "adm-zip": "^0.5.16",
     "commander": "^12.1.0",
     "crypto-js": "^4.2.0",
+    "dotenv": "^17.3.1",
     "keytar": "^7.9.0",
+    "module-alias": "^2.3.4",
     "open": "^10.2.0",
     "pdf-lib": "^1.17.1",
     "picocolors": "^1.1.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "table": "^6.9.0",
+    "tsconfig-paths": "^4.2.0",
     "zod": "^4.3.6"
+  },
+  "_moduleAliases": {
+    "@": "src/gui/dist"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@types/adm-zip": "^0.5.7",
     "@types/bun": "^1.3.9",
     "@types/crypto-js": "^4.2.2",
+    "@types/node": "^25.2.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.2.1",
+    "electron": "^40.4.1",
+    "electron-builder": "^26.8.1",
+    "esbuild": "^0.27.3",
     "prettier": "^3.8.1",
-    "typescript": "^5.9.3"
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "wait-on": "^9.0.4"
   }
 }
