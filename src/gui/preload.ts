@@ -57,7 +57,7 @@ try {
     getLibrary: () => ipcRenderer.invoke('books:getAvailableBooks')
   })
 
-  console.log('[Preload] Electron IPC 브릿지 로드 완료 ✅')
+  console.log('[Preload] Electron IPC 브릿지 로드 완료')
 } catch (error) {
   console.error('[Preload] 브릿지 로드 실패:', error)
 }

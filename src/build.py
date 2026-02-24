@@ -13,9 +13,9 @@ def main():
         str(main_script),
         "--onefile",
         "--name=ridi",
-        "--windowed",           # GUI 앱이면 추가 (콘솔창 안 뜸)
-        # "--icon=app.ico",     # 필요하면 추가
-        # "--add-data=assets;assets",  # 폴더/파일 필요하면
+        "--windowed",
+        # "--icon=app.ico",
+        # "--add-data=assets;assets",
     ]
 
     print("Building:", " ".join(args))
